@@ -51,6 +51,7 @@ add_action('plugins_loaded', static function () {
         'class-hcm-fees',
         'class-hcm-checkout',
         'class-hcm-batch',
+        'class-hcm-sync',
     ] as $file) {
         require_once HCM_DIR . 'includes/' . $file . '.php';
     }
@@ -58,6 +59,9 @@ add_action('plugins_loaded', static function () {
     // Hook JWT into WordPress authentication
     add_filter('determine_current_user',     ['HCM_JWT', 'authenticate'], 20);
     add_filter('rest_authentication_errors', ['HCM_JWT', 'auth_errors']);
+
+    // Initialize Sync hooks
+    HCM_Sync::init();
 
     // Register all REST API routes
     add_action('rest_api_init', static function () {
