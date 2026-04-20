@@ -221,10 +221,6 @@ curl -H "X-Cart-Key: guest_uuid" https://yoursite.com/wp-json/hcm/v1/cart
   "product_id": 123,
   "quantity": 2,
   "variation_id": 456,       // optional, for variable products
-  "variation": {             // optional
-    "attribute_pa_color": "blue",
-    "attribute_pa_size": "M"
-  }
 }
 
 // Response — full cart (same as GET /cart)

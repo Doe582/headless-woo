@@ -232,7 +232,7 @@ class HCM_Coupon {
         // No restrictions → all products eligible
         if (empty($allowed_ids) && empty($cat_ids)) return true;
 
-        if ($allowed_ids && in_array($product_id, $allowed_ids, true)) return true;
+        if ($allowed_ids && in_array($product_id, $allowed_ids)) return true;
 
         if ($cat_ids) {
             $product_cats = wc_get_product_term_ids($product_id, 'product_cat');
@@ -261,7 +261,7 @@ class HCM_Coupon {
         if (empty($excluded) && empty($excluded_cats)) return false;
 
         foreach ($cart['items'] as $item) {
-            if ($excluded && in_array($item['product_id'], $excluded, true)) return true;
+            if ($excluded && in_array($item['product_id'], $excluded)) return true;
 
             if ($excluded_cats) {
                 $cats = wc_get_product_term_ids($item['product_id'], 'product_cat');

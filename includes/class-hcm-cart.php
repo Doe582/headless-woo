@@ -84,6 +84,26 @@ class HCM_Cart {
         $quantity     = max(1, (int) ($req->get_param('quantity') ?? 1));
         $variation    = (array) ($req->get_param('variation') ?? []);
 
+        // If variation_id is 0 but variation attributes are provided, try to find the matching variation
+        if ($variation_id === 0 && !empty($variation)) {
+            $product = wc_get_product($product_id);
+            if ($product && $product->is_type('variable')) {
+                $data_store  = \WC_Data_Store::load('product');
+                $resolved_id = $data_store->find_matching_product_variation($product, $variation);
+                if ($resolved_id) {
+                    $variation_id = $resolved_id;
+                }
+            }
+        }
+        
+        // If variation_id is provided but variation attributes are not, try to fetch them
+        if ($variation_id > 0 && empty($variation)) {
+            $variation_obj = wc_get_product($variation_id);
+            if ($variation_obj && $variation_obj->is_type('variation')) {
+                $variation = $variation_obj->get_variation_attributes();
+            }
+        }
+
         // Validate product
         $product = wc_get_product($variation_id ?: $product_id);
         if (!$product) {
@@ -112,6 +132,7 @@ class HCM_Cart {
             $cart['items'][$key]['quantity'] = $max;
         }
 
+        $this->recalculate_coupons($cart);
         $this->save_session($req, $cart);
         return rest_ensure_response($this->format_cart($cart));
     }
@@ -131,6 +152,7 @@ class HCM_Cart {
             $cart['items'][$key]['quantity'] = $quantity;
         }
 
+        $this->recalculate_coupons($cart);
         $this->save_session($req, $cart);
         return rest_ensure_response($this->format_cart($cart));
     }
@@ -144,6 +166,7 @@ class HCM_Cart {
         }
 
         unset($cart['items'][$key]);
+        $this->recalculate_coupons($cart);
         $this->save_session($req, $cart);
         return rest_ensure_response($this->format_cart($cart));
     }
@@ -314,7 +337,8 @@ class HCM_Cart {
             ];
         }
 
-        // Sum coupon discounts
+        // Recalculate coupons to ensure totals are fresh
+        $this->recalculate_coupons($cart);
         foreach ($cart['coupons'] as $data) {
             $discount += (float) ($data['discount'] ?? 0);
         }
@@ -373,5 +397,21 @@ class HCM_Cart {
             'quantity'     => ['required' => false, 'type' => 'integer', 'default' => 1, 'minimum' => 1],
             'variation'    => ['required' => false, 'type' => 'object',  'default' => []],
         ];
+    }
+
+    /**
+     * Recalculate all applied coupon discounts based on current items.
+     */
+    public function recalculate_coupons(array &$cart): void {
+        if (empty($cart['coupons'])) return;
+        $coupon_ctrl = new HCM_Coupon();
+        foreach ($cart['coupons'] as $code => &$data) {
+            $coupon = new \WC_Coupon($code);
+            if (!$coupon->get_id()) {
+                unset($cart['coupons'][$code]);
+                continue;
+            }
+            $data['discount'] = $coupon_ctrl->calculate_discount($coupon, $cart);
+        }
     }
 }
